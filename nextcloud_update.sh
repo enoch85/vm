@@ -85,7 +85,7 @@ fi
 # https://github.com/nextcloud/vm/pull/2040
 if pecl list | grep apcu >/dev/null 2>&1
 then
-    sed -i "/memcache.local/d" "$NCPATH"/config/config.php
+    sed -i "\|memcache.local|d" "$NCPATH"/config/config.php
     if pecl list | grep redis >/dev/null 2>&1
     then
         nextcloud_occ config:system:set memcache.local --value='\OC\Memcache\Redis'
@@ -265,7 +265,7 @@ fi
 
 # Since the branch change, always get the latest update script
 download_script STATIC update
-chmod +x $SCRIPTS/update.sh
+chmod +x "$SCRIPTS"/update.sh
 
 # Ubuntu 16.04 is deprecated
 check_distro_version
@@ -353,7 +353,7 @@ if [ ! -d "$BACKUP" ]
 then
     mkdir -p "$BACKUP"
 fi
-nextcloud_occ app:list --enabled | sed '/Disabled/,$d' | awk '{print$2}' | tr -d ':' | sed '/^$/d' > "$BACKUP/enabled_apps_before_upgrade.txt"
+nextcloud_occ app:list --enabled | sed '\|Disabled|,$d' | awk '{print$2}' | tr -d ':' | sed '\|^$|d' > "$BACKUP/enabled_apps_before_upgrade.txt"
 
 # Enter maintenance:mode
 print_text_in_color "$IGreen" "Enabling maintenance:mode..."
@@ -467,7 +467,7 @@ fi
 # Remove old redis
 if grep -qFx extension=redis.so "$PHP_INI"
 then
-    sed -i "/extension=redis.so/d" "$PHP_INI"
+    sed -i "\|extension=redis.so|d" "$PHP_INI"
 fi
 # Check if redis is enabled and create the file if not
 if [ ! -f "$PHP_MODS_DIR"/redis.ini ]
@@ -498,9 +498,9 @@ then
         check_command phpdismod -v ALL apcu
         rm -f "$PHP_MODS_DIR"/apcu.ini
         rm -f "$PHP_MODS_DIR"/apcu_bc.ini
-        sed -i "/extension=apcu.so/d" "$PHP_INI"
-        sed -i "/APCu/d" "$PHP_INI"
-        sed -i "/apc./d" "$PHP_INI"
+        sed -i "\|extension=apcu.so|d" "$PHP_INI"
+        sed -i "\|APCu|d" "$PHP_INI"
+        sed -i "\|apc.|d" "$PHP_INI"
     fi
 fi
 
@@ -528,7 +528,7 @@ then
             # Remove old igbinary
             if grep -qFx extension=igbinary.so "$PHP_INI"
             then
-                sed -i "/extension=igbinary.so/d" "$PHP_INI"
+                sed -i "\|extension=igbinary.so|d" "$PHP_INI"
             fi
             # Check if igbinary is enabled and create the file if not
             if [ ! -f "$PHP_MODS_DIR"/igbinary.ini ]
@@ -561,7 +561,7 @@ then
             # Remove old smbclient
             if grep -qFx extension=smbclient.so "$PHP_INI"
             then
-                sed -i "/extension=smbclient.so/d" "$PHP_INI"
+                sed -i "\|extension=smbclient.so|d" "$PHP_INI"
             fi
         fi
         if pecl list | grep -q inotify
@@ -569,7 +569,7 @@ then
             # Remove old inotify
             if grep -qFx extension=inotify.so "$PHP_INI"
             then
-                sed -i "/extension=inotify.so/d" "$PHP_INI"
+                sed -i "\|extension=inotify.so|d" "$PHP_INI"
             fi
             yes no | pecl upgrade inotify
             if [ ! -f "$PHP_MODS_DIR"/inotify.ini ]
@@ -788,7 +788,7 @@ sudo -u www-data php "$NCPATH"/occ maintenance:mode --off
 
 # Make all previous files executable
 print_text_in_color "$ICyan" "Finding all executable files in $NC_APPS_PATH"
-find_executables="$(find $NC_APPS_PATH -type f -executable)"
+find_executables="$(find "$NC_APPS_PATH" -type f -executable)"
 
 # Update all Nextcloud apps
 if [ "${CURRENTVERSION%%.*}" -ge "15" ]
@@ -826,7 +826,7 @@ else
 fi
 
 # Apply correct redirect rule to avoid security check errors
-REDIRECTRULE="$(grep -r "\[R=301,L\]" $SITES_AVAILABLE | cut -d ":" -f1)"
+REDIRECTRULE="$(grep -r "\[R=301,L\]" "$SITES_AVAILABLE" | cut -d ":" -f1)"
 if [ -n "$REDIRECTRULE" ]
 then
     # Change the redirect rule in all files in Apache available
@@ -1381,7 +1381,7 @@ if [ -f /etc/apache2/sites-available/"$(hostname -f)".conf ]
 then
     if grep -q 'Header always set Referrer-Policy' /etc/apache2/sites-available/"$(hostname -f)".conf
     then
-        sed -i '/Header always set Referrer-Policy/d' /etc/apache2/sites-available/"$(hostname -f)".conf
+        sed -i '\|Header always set Referrer-Policy|d' /etc/apache2/sites-available/"$(hostname -f)".conf
         restart_webserver
     fi
 fi
