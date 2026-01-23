@@ -4,7 +4,7 @@
 # DO NOT USE THIS SCRIPT WHEN UPDATING NEXTCLOUD / YOUR SERVER! RUN `sudo bash /var/scripts/update.sh` INSTEAD. #
 #################################################################################################################
 
-# T&M Hansson IT AB © - 2025, https://www.hanssonit.se/
+# T&M Hansson IT AB © - 2026, https://www.hanssonit.se/
 # GNU General Public License v3.0
 # https://github.com/nextcloud/vm/blob/main/LICENSE
 
@@ -1246,9 +1246,9 @@ then
     fi
     if [ "${CURRENTVERSION%%.*}" -ge "22" ]
     then
-        if ! nextcloud_occ config:system:get maintenance_window_start
+        if [ -z "$(nextcloud_occ_no_check config:system:get maintenance_window_start)" ];
         then
-            nextcloud_occ config:system:set maintenance_window_start --type=integer --value=2
+            nextcloud_occ config:system:set maintenance_window_start --type=integer --value=100
         fi
     fi
     if [ "${CURRENTVERSION%%.*}" -ge "23" ]
