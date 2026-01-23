@@ -346,6 +346,15 @@ then
     export NEEDRESTART_SUSPEND=1
 fi
 
+# Save the list of enabled apps before upgrade (to re-enable them after upgrade)
+# https://github.com/nextcloud/vm/issues/2797
+print_text_in_color "$ICyan" "Saving list of enabled apps before upgrade..."
+if [ ! -d "$BACKUP" ]
+then
+    mkdir -p "$BACKUP"
+fi
+nextcloud_occ app:list --enabled | sed '/Disabled/,$d' | awk '{print$2}' | tr -d ':' | sed '/^$/d' > "$BACKUP/enabled_apps_before_upgrade.txt"
+
 # Enter maintenance:mode
 print_text_in_color "$IGreen" "Enabling maintenance:mode..."
 sudo -u www-data php "$NCPATH"/occ maintenance:mode --on
@@ -1312,7 +1321,8 @@ then
     fi
 fi
 
-# If the app isn't installed (maybe because it's incompatible), then at least restore from backup and make sure it's disabled
+# Restore apps from backup that are missing in the new Nextcloud installation
+# (occ upgrade will automatically disable incompatible apps)
 BACKUP_APPS="$(find "$BACKUP/apps" -maxdepth 1 -mindepth 1 -type d)"
 mapfile -t BACKUP_APPS <<< "$BACKUP_APPS"
 for app in "${BACKUP_APPS[@]}"
@@ -1323,10 +1333,9 @@ do
             print_text_in_color "$ICyan" "Restoring $app from $BACKUP/apps..."
             rsync -Aaxz "$BACKUP/apps/$app" "$NC_APPS_PATH/"
             bash "$SECURE"
-            nextcloud_occ_no_check app:disable "$app"
             # Don't execute the update before all cronjobs are finished
             check_running_cronjobs
-            # Execute the update
+            # Execute the update (will disable incompatible apps automatically)
             nextcloud_occ upgrade
     fi
 done
@@ -1337,6 +1346,34 @@ then
     # Check for upgrades
     print_text_in_color "$ICyan" "Trying to automatically update all Nextcloud apps again..."
     nextcloud_occ_no_check app:update --all
+fi
+
+# Re-enable previously enabled apps after upgrade
+# https://github.com/nextcloud/vm/issues/2797
+if [ -f "$BACKUP/enabled_apps_before_upgrade.txt" ]
+then
+    print_text_in_color "$ICyan" "Attempting to re-enable previously enabled apps..."
+    while IFS= read -r app
+    do
+        # Skip empty lines
+        if [ -z "$app" ]
+        then
+            continue
+        fi
+        # Check if app directory exists and try to enable it
+        if [ -d "$NC_APPS_PATH/$app" ]
+        then
+            if ! is_app_enabled "$app"
+            then
+                if nextcloud_occ_no_check app:enable "$app" >/dev/null 2>&1
+                then
+                    print_text_in_color "$IGreen" "Re-enabled $app"
+                else
+                    print_text_in_color "$IRed" "Could not re-enable $app (may be incompatible with Nextcloud $CURRENTVERSION_after)"
+                fi
+            fi
+        fi
+    done < "$BACKUP/enabled_apps_before_upgrade.txt"
 fi
 
 # Remove header for Nextcloud 14 (already in .htaccess)
