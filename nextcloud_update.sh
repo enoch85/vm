@@ -263,9 +263,22 @@ then
     fi
 fi
 
+# Check if reboot was enabled before downloading new script
+if [ -f "$SCRIPTS/update.sh" ] && grep -q "shutdown -r" "$SCRIPTS/update.sh"
+then
+    REBOOT_ENABLED=1
+fi
+
 # Since the branch change, always get the latest update script
 download_script STATIC update
 chmod +x "$SCRIPTS"/update.sh
+
+# Restore reboot if it was enabled
+if [ "$REBOOT_ENABLED" = 1 ]
+then
+    sed -i "s|exit|/sbin/shutdown -r +10|g" "$SCRIPTS"/update.sh
+    echo "exit" >> "$SCRIPTS"/update.sh
+fi
 
 # Ubuntu 16.04 is deprecated
 check_distro_version
